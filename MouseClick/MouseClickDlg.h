@@ -37,4 +37,7 @@ public:
 	afx_msg void OnClickedStart();
 	afx_msg void OnClickedStop();
 	afx_msg void OnChangeIntervaltime();
+	afx_msg void OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2);
+	afx_msg void OnClose();
+	afx_msg void OnSelchangeHotKey();
 };

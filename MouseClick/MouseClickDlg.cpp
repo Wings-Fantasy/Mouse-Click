@@ -30,7 +30,12 @@ BEGIN_MESSAGE_MAP(CMouseClickDlg, CDialogEx)
 	ON_BN_CLICKED(Start, &CMouseClickDlg::OnClickedStart)
 	ON_BN_CLICKED(Stop, &CMouseClickDlg::OnClickedStop)
 	ON_EN_CHANGE(IntervalTime, &CMouseClickDlg::OnChangeIntervaltime)
+	ON_WM_HOTKEY()
+	ON_WM_CLOSE()
+	ON_CBN_SELCHANGE(HotKey, &CMouseClickDlg::OnSelchangeHotKey)
 END_MESSAGE_MAP()
+
+ATOM mouseClickHotKeyId;
 
 // CMouseClickDlg 消息处理程序
 BOOL CMouseClickDlg::OnInitDialog()
@@ -45,8 +50,9 @@ BOOL CMouseClickDlg::OnInitDialog()
 	((CComboBox*)GetDlgItem(Mouse))->SetCurSel(0);
 	((CButton*)GetDlgItem(FixedMode))->SetCheck(TRUE);
 	GetDlgItem(IntervalTime)->SetWindowTextW(_T("10.0"));
-	((CComboBox*)GetDlgItem(HotKey))->SetCurSel(0);
-	GetDlgItem(HotKey)->EnableWindow(false);
+	((CComboBox*)GetDlgItem(HotKey))->SetCurSel(6);
+	mouseClickHotKeyId = GlobalAddAtom(_T("mouseClickHotKeyId")) - 0xc000;
+	RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F7);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -104,7 +110,7 @@ BOOL CMouseClickDlg::PreTranslateMessage(MSG* pMsg)
 	{
 		CString number;
 		GetDlgItem(IntervalTime)->GetWindowTextW(number);
-		if (!Char(pMsg->wParam, number)) return true;
+		if (!Char((char)pMsg->wParam, number)) return true;
 	}
 	return CDialogEx::PreTranslateMessage(pMsg);
 }
@@ -112,7 +118,7 @@ BOOL CMouseClickDlg::PreTranslateMessage(MSG* pMsg)
 BOOL Char(char msg, CString number)
 {
 	//处理输入小数点
-	if (msg == '.')
+	if (msg == '.' || msg == '\x2')
 	{
 		if (number.Find('.') == -1) return true;
 		else return false;
@@ -120,6 +126,62 @@ BOOL Char(char msg, CString number)
 	//处理数字、Backspace和Delete
 	else if ((msg >= '0' && msg <= '9') || (msg == 0x08) || (msg == 0x10)) return true;
 	else return false;
+}
+
+void CMouseClickDlg::OnSelchangeHotKey()
+{
+	UnregisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId);
+	int hotKey = ((CComboBox*)GetDlgItem(HotKey))->GetCurSel();
+	switch (hotKey)
+	{
+	case 0:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F1);
+		break;
+	case 1:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F2);
+		break;
+	case 2:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F3);
+		break;
+	case 3:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F4);
+		break;
+	case 4:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F5);
+		break;
+	case 5:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F6);
+		break;
+	case 6:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F7);
+		break;
+	case 7:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F8);
+		break;
+	case 8:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F9);
+		break;
+	case 9:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F10);
+		break;
+	case 10:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F11);
+		break;
+	case 11:
+		RegisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId, 0, VK_F12);
+		break;
+	}
+}
+
+void CMouseClickDlg::OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2)
+{
+	if (nHotKeyId == mouseClickHotKeyId)
+	{
+		if (GetDlgItem(Start)->IsWindowEnabled()) CMouseClickDlg::OnClickedStart();
+		else CMouseClickDlg::OnClickedStop();
+	}
+
+	CDialogEx::OnHotKey(nHotKeyId, nKey1, nKey2);
 }
 
 void CMouseClickDlg::OnClickedFixedMode()
@@ -138,6 +200,8 @@ void CMouseClickDlg::OnChangeIntervaltime()
 	CString timeString;
 	GetDlgItem(IntervalTime)->GetWindowTextW(timeString);
 	timeString.ReleaseBuffer();
+	if (timeString.Find('.') == -1) timeString.Replace(_T("。"), _T("."));
+	else timeString.Replace(_T("。"), _T(""));
 	if (_ttof(timeString) > 60.0)
 	{
 		GetDlgItem(IntervalTime)->SetWindowTextW(_T("60"));
@@ -185,7 +249,7 @@ void CMouseClickDlg::OnClickedStop()
 	GetDlgItem(FixedMode)->EnableWindow(true);
 	GetDlgItem(RandomMode)->EnableWindow(true);
 	GetDlgItem(IntervalTime)->EnableWindow(true);
-	//GetDlgItem(HotKey)->EnableWindow(true);
+	GetDlgItem(HotKey)->EnableWindow(true);
 	GetDlgItem(Start)->EnableWindow(true);
 	GetDlgItem(Stop)->EnableWindow(false);
 
@@ -219,4 +283,13 @@ DWORD WINAPI MouseClickThread(LPVOID lpParam)
 		else Sleep(mouse->delay);
 	}
 	return 0;
+}
+
+
+void CMouseClickDlg::OnClose()
+{
+	UnregisterHotKey(AfxGetMainWnd()->m_hWnd, mouseClickHotKeyId);
+	GlobalDeleteAtom(mouseClickHotKeyId);
+
+	CDialogEx::OnClose();
 }
